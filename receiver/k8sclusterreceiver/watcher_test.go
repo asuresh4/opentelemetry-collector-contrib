@@ -82,7 +82,7 @@ func TestSetupMetadataExporters(t *testing.T) {
 				t.Errorf("setupMetadataExporters() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			require.Equal(t, len(tt.fields.metadataConsumers), len(rw.metadataConsumers))
+			require.Equal(t, len(tt.fields.metadataConsumers), len(rw.metadataConsumers)+1)
 		})
 	}
 }

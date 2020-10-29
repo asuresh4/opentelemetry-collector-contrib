@@ -129,7 +129,7 @@ commands:
     steps:
       - when:
           condition:
-            equal: [master, << pipeline.git.branch >>]
+            equal: [push-unit-test-results, << pipeline.git.branch >>]
           steps:
             - run:
                 name: Generate GitHub Issue
@@ -308,14 +308,24 @@ jobs:
 
   unit-tests:
     executor: golang
+    environment:
+      TEST_RESULTS: unit-test-results/junit/results.xml
     steps:
       - restore_workspace
       - run:
           name: Unit test coverage
-          command: make unit-tests-with-cover
+          command: |
+            mkdir -p unit-test-results/junit
+            trap "go-junit-report  -set-exit-code < unit-test-results/go-unit-tests.out > unit-test-results/junit/results.xml" EXIT
+            make unit-tests-with-cover | tee unit-test-results/go-unit-tests.out
       - run:
           name: Upload unit test coverage
           command: bash <(curl -s https://codecov.io/bash) -F unit
+      - store_artifacts:
+          path: unit-test-results
+      - store_test_results:
+          path: unit-test-results/junit
+      - github_issue_generator
 
   loadtest:
     executor: golang
