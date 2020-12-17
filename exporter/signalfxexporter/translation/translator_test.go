@@ -29,6 +29,8 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumerdata"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter/translation/dpfilters"
 )
 
 type byContent []*sfxpb.DataPoint
@@ -505,8 +507,12 @@ func TestNewMetricTranslator(t *testing.T) {
 			name: "drop_metrics_valid",
 			trs: []Rule{
 				{
-					Action:      ActionDropMetrics,
-					MetricNames: map[string]bool{"metric": true},
+					Action: ActionDropMetrics,
+					MetricFilters: []dpfilters.MetricFilter{
+						{
+							MetricNames: []string{"metric"},
+						},
+					},
 				},
 			},
 			wantDimensionsMap: nil,
@@ -520,7 +526,7 @@ func TestNewMetricTranslator(t *testing.T) {
 				},
 			},
 			wantDimensionsMap: nil,
-			wantError:         `field "metric_names" is required for "drop_metrics" translation rule`,
+			wantError:         `field "metric_filters" is required for "drop_metrics" translation rule`,
 		},
 		{
 			name: "delta_metric_invalid",
@@ -1830,9 +1836,10 @@ func TestTranslateDataPoints(t *testing.T) {
 			trs: []Rule{
 				{
 					Action: ActionDropMetrics,
-					MetricNames: map[string]bool{
-						"metric1": true,
-						"metric2": true,
+					MetricFilters: []dpfilters.MetricFilter{
+						{
+							MetricNames: []string{"metric1", "metric2"},
+						},
 					},
 				},
 			},
@@ -1886,6 +1893,7 @@ func TestTranslateDataPoints(t *testing.T) {
 }
 
 func assertEqualPoints(t *testing.T, got []*sfxpb.DataPoint, want []*sfxpb.DataPoint, action Action) {
+	require.Equal(t, len(want), len(got))
 	// Sort metrics to handle not deterministic order from aggregation
 	if action == ActionAggregateMetric {
 		sort.Sort(byContent(want))

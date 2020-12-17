@@ -17,13 +17,19 @@ package translation
 import (
 	"testing"
 
+	sfxpb "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter/translation/dpfilters"
 )
 
 func TestGetExcludeMetricsRule(t *testing.T) {
-	rule := GetExcludeMetricsRule([]string{"m1", "m2"})
+	rule := GetExcludeMetricsRule([]dpfilters.MetricFilter{{MetricNames: []string{"m1", "m2"}}})
+	require.Equal(t, 2, len(rule.MetricFilters[0].MetricNames))
+	fs, err := dpfilters.NewFilterSet(rule.MetricFilters)
+	require.NoError(t, err)
 	assert.Equal(t, rule.Action, ActionDropMetrics)
-	assert.Equal(t, 2, len(rule.MetricNames))
-	assert.False(t, rule.MetricNames["m0"])
-	assert.True(t, rule.MetricNames["m1"])
+	assert.False(t, fs.Matches(&sfxpb.DataPoint{Metric: "m0"}))
+	assert.True(t, fs.Matches(&sfxpb.DataPoint{Metric: "m1"}))
 }
