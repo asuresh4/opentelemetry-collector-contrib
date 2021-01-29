@@ -62,8 +62,6 @@ The following configuration options can also be configured:
 - `headers` (no default): Headers to pass in the payload.
 - `log_dimension_updates` (default = `false`): Whether or not to log dimension
   updates.
-- `send_compatible_metrics` (default = `false`): Whether metrics must be
-  translated to a format backward-compatible with SignalFx naming conventions.
 - `timeout` (default = 5s): Amount of time to wait for a send operation to
   complete.
 - `translation_rules`: Set of rules on how to translate metrics to a SignalFx

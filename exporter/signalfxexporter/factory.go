@@ -21,11 +21,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/component"
 	otelconfig "go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configmodels"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter/correlation"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter/translation"
@@ -49,6 +51,7 @@ func NewFactory() component.ExporterFactory {
 		exporterhelper.WithMetrics(createMetricsExporter),
 		exporterhelper.WithLogs(createLogsExporter),
 		exporterhelper.WithTraces(createTraceExporter),
+		exporterhelper.WithCustomUnmarshaler(customUnmarshaler),
 	)
 }
 
@@ -64,11 +67,54 @@ func createDefaultConfig() configmodels.Exporter {
 		AccessTokenPassthroughConfig: splunk.AccessTokenPassthroughConfig{
 			AccessTokenPassthrough: true,
 		},
-		SendCompatibleMetrics: false,
-		TranslationRules:      nil,
-		DeltaTranslationTTL:   3600,
-		Correlation:           correlation.DefaultConfig(),
+		TranslationRules:    loadDefaultTranslationRules(),
+		DeltaTranslationTTL: 3600,
+		Correlation:         correlation.DefaultConfig(),
 	}
+}
+
+func customUnmarshaler(componentViperSection *viper.Viper, intoCfg interface{}) error {
+	if componentViperSection == nil {
+		// Nothing to do if there is no config given.
+		return nil
+	}
+
+	if err := componentViperSection.Unmarshal(intoCfg); err != nil {
+		return err
+	}
+
+	config := intoCfg.(*Config)
+
+	// custom unmarhalling is required to get []translation.Rule, the default
+	// unmarshaller only supports string slices.
+	if !componentViperSection.IsSet("translation_rules") {
+		config.TranslationRules = loadDefaultTranslationRules()
+	} else {
+		mgs := componentViperSection.Get("translation_rules")
+
+		out, err := yaml.Marshal(mgs)
+		if err != nil {
+			return fmt.Errorf("failed to marshal 'translation_rules' to yaml: %w", err)
+		}
+
+		err = yaml.UnmarshalStrict(out, &config.TranslationRules)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve 'translation_rules': %w", err)
+		}
+	}
+
+	defaultExcludes, err := loadDefaultExcludes()
+	if err != nil {
+		return err
+	}
+
+	if !componentViperSection.IsSet("exclude_metrics") {
+		config.ExcludeMetrics = defaultExcludes
+		return nil
+	}
+
+	config.ExcludeMetrics = append(config.ExcludeMetrics, defaultExcludes...)
+	return nil
 }
 
 func createTraceExporter(
@@ -106,15 +152,6 @@ func createMetricsExporter(
 ) (component.MetricsExporter, error) {
 
 	expCfg := config.(*Config)
-	err := setTranslationRules(expCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	err = setDefaultExcludes(expCfg)
-	if err != nil {
-		return nil, err
-	}
 
 	exp, err := newSignalFxExporter(expCfg, params.Logger)
 	if err != nil {
@@ -149,18 +186,7 @@ func createMetricsExporter(
 	}, nil
 }
 
-func setTranslationRules(cfg *Config) error {
-	if cfg.SendCompatibleMetrics && cfg.TranslationRules == nil {
-		defaultRules, err := loadDefaultTranslationRules()
-		if err != nil {
-			return err
-		}
-		cfg.TranslationRules = defaultRules
-	}
-	return nil
-}
-
-func loadDefaultTranslationRules() ([]translation.Rule, error) {
+func loadDefaultTranslationRules() []translation.Rule {
 	config := Config{}
 
 	v := otelconfig.NewViper()
@@ -168,24 +194,10 @@ func loadDefaultTranslationRules() ([]translation.Rule, error) {
 	v.ReadConfig(strings.NewReader(translation.DefaultTranslationRulesYaml))
 	err := v.UnmarshalExact(&config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load default translation rules: %v", err)
+		panic(err)
 	}
 
-	return config.TranslationRules, nil
-}
-
-// setDefaultExcludes appends default metrics to be excluded to the exclude_metrics option.
-func setDefaultExcludes(cfg *Config) error {
-	defaultExcludeMetrics, err := loadDefaultExcludes()
-	if err != nil {
-		return err
-	}
-	if cfg.ExcludeMetrics == nil {
-		cfg.ExcludeMetrics = defaultExcludeMetrics
-	} else {
-		cfg.ExcludeMetrics = append(cfg.ExcludeMetrics, defaultExcludeMetrics...)
-	}
-	return nil
+	return config.TranslationRules
 }
 
 func loadDefaultExcludes() ([]dpfilters.MetricFilter, error) {

@@ -64,10 +64,6 @@ type Config struct {
 
 	splunk.AccessTokenPassthroughConfig `mapstructure:",squash"`
 
-	// SendCompatibleMetrics specifies if metrics must be sent in a format backward-compatible with
-	// SignalFx naming conventions, "false" by default.
-	SendCompatibleMetrics bool `mapstructure:"send_compatible_metrics"`
-
 	// TranslationRules defines a set of rules how to translate metrics to a SignalFx compatible format
 	// Rules defined in translation/constants.go are used by default.
 	TranslationRules []translation.Rule `mapstructure:"translation_rules"`
@@ -120,12 +116,9 @@ func (cfg *Config) getOptionsFromConfig() (*exporterOptions, error) {
 		cfg.Timeout = 5 * time.Second
 	}
 
-	var metricTranslator *translation.MetricTranslator
-	if cfg.SendCompatibleMetrics {
-		metricTranslator, err = translation.NewMetricTranslator(cfg.TranslationRules, cfg.DeltaTranslationTTL)
-		if err != nil {
-			return nil, fmt.Errorf("invalid \"translation_rules\": %v", err)
-		}
+	metricTranslator, err := translation.NewMetricTranslator(cfg.TranslationRules, cfg.DeltaTranslationTTL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid \"translation_rules\": %v", err)
 	}
 
 	return &exporterOptions{
