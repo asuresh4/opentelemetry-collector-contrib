@@ -79,6 +79,7 @@ func TestIntegration(t *testing.T) {
 			f := NewFactory()
 			cfg := f.CreateDefaultConfig().(*Config)
 			cfg.Endpoint = c.AddrForPort(zkPort)
+			cfg.CollectionInterval = 1 * time.Second
 
 			consumer := new(consumertest.MetricsSink)
 			params := component.ReceiverCreateParams{Logger: zaptest.NewLogger(t)}
@@ -92,7 +93,7 @@ func TestIntegration(t *testing.T) {
 				func() bool {
 					return consumer.MetricsCount() >= test.expectedNumMetrics
 				},
-				20*time.Second, 2*time.Second,
+				20*time.Second, 500*time.Millisecond,
 				fmt.Sprintf(
 					"received %d metrics, expecting %d",
 					consumer.MetricsCount(),
