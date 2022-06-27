@@ -46,7 +46,7 @@ require (
 )
 
 require (
-	github.com/stretchr/testify v1.7.2
-	go.opentelemetry.io/collector/pdata v0.53.0
+	github.com/stretchr/testify v1.7.4
+	go.opentelemetry.io/collector/pdata v0.54.0
 	go.uber.org/multierr v1.8.0 // indirect
 )
