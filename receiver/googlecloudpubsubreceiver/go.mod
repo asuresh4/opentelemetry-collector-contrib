@@ -4,9 +4,9 @@ go 1.17
 
 require (
 	cloud.google.com/go/pubsub v1.22.2
-	github.com/stretchr/testify v1.7.2
-	go.opentelemetry.io/collector v0.53.0
-	go.opentelemetry.io/collector/pdata v0.53.0
+	github.com/stretchr/testify v1.8.0
+	go.opentelemetry.io/collector v0.55.0
+	go.opentelemetry.io/collector/pdata v0.54.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/zap v1.21.0
 	google.golang.org/api v0.83.0
@@ -28,7 +28,7 @@ require (
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/knadh/koanf v1.4.1 // indirect
+	github.com/knadh/koanf v1.4.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
