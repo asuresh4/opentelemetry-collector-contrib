@@ -70,6 +70,7 @@ func (t ToTranslator) ToTraces(zipkinSpans []*zipkinmodel.SpanModel) (ptrace.Tra
 		}
 		err := zSpanToInternal(zspan, tags, curSpans.AppendEmpty(), t.ParseStringTags)
 		if err != nil {
+			fmt.Printf("SWAT logging: %v", zspan)
 			return traceData, err
 		}
 	}
